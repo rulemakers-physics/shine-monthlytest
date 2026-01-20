@@ -7,7 +7,7 @@ export default function ExamManager() {
   const [examId, setExamId] = useState("2026-03"); 
   const [subjectInfo, setSubjectInfo] = useState({
     grade: "고1",
-    subjectName: "수학",
+    subjectName: "국어",
     isEnglishSkippedListening: false,
     answerString: "",        
     scoreString: "",         
@@ -155,6 +155,7 @@ export default function ExamManager() {
           <label className="block font-bold mb-1">학년</label>
           <select 
             className="w-full border p-2 rounded"
+            value={subjectInfo.grade} // [수정] value 속성 추가
             onChange={e => setSubjectInfo({...subjectInfo, grade: e.target.value})}
           >
             <option value="고1">고1</option>
@@ -166,6 +167,7 @@ export default function ExamManager() {
           <label className="block font-bold mb-1">과목</label>
           <select 
             className="w-full border p-2 rounded"
+            value={subjectInfo.subjectName} // [수정] value 속성 추가
             onChange={e => setSubjectInfo({...subjectInfo, subjectName: e.target.value})}
           >
             <option value="국어">국어</option>

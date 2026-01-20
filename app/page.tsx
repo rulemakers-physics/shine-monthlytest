@@ -79,7 +79,6 @@ export default function Home() {
         studentName: studentInfo.name,
         studentNumber: studentInfo.number,
         answers: answers,
-        subjectConfig: subjectConfig // (편의상 config도 같이 보냄, 보안 위해선 서버에서 다시 조회 추천)
       })
     });
     
