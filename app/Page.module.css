@@ -40,3 +40,81 @@
 
 .submitBtn { width: 100%; margin-top: 2rem; padding: 1rem; background: #0070f3; color: white; border: none; border-radius: 8px; font-size: 1.2rem; font-weight: bold; cursor: pointer; }
 .submitBtn:hover { background: #005bb5; }
+
+/* app/Page.module.css 하단에 추가 또는 수정 */
+
+.omrGrid { 
+  display: grid; 
+  /* 모바일에서도 입력하기 편하게 한 줄에 여러 개 배치 */
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); 
+  gap: 0.8rem; 
+}
+
+.omrRow { 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  gap: 10px;
+  padding: 0.5rem; 
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  background-color: #fafafa;
+}
+
+.qNumBadge { 
+  background: #555; 
+  color: white; 
+  padding: 4px 8px; 
+  border-radius: 4px; 
+  font-size: 0.9rem; 
+  font-weight: bold;
+  min-width: 40px;
+  text-align: center;
+}
+
+/* 답안 입력 공통 */
+.answerInput {
+  width: 100%;
+  padding: 8px;
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: bold;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.answerInput:focus {
+  border-color: #0070f3;
+  box-shadow: 0 0 0 2px rgba(0,112,243, 0.2);
+}
+
+/* 객관식 전용 스타일 */
+.objectiveInput {
+  max-width: 60px; /* 숫자 하나만 들어가므로 작게 */
+  color: #333;
+}
+
+/* 서술형 전용 스타일 */
+.subjectiveInput {
+  max-width: 80px; /* 3자리 숫자 */
+  background-color: #fffbeb; /* 연한 노란색 배경으로 구분 */
+  border-color: #fcd34d;
+}
+
+/* 반응형 OMR 카드 그리드 */
+.omrGrid { 
+  display: grid; 
+  /* 화면 크기에 따라 100px 이상의 너비로 자동 채움 */
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); 
+  gap: 12px; 
+}
+
+/* 모바일 환경 최적화 */
+@media (max-width: 640px) {
+  .omrGrid {
+    gap: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  }
+}

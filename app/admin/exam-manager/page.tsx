@@ -1,7 +1,7 @@
 "use client";
 import { useState } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 
 export default function ExamManager() {
   const [examId, setExamId] = useState("2026-03"); 
@@ -11,10 +11,11 @@ export default function ExamManager() {
     isEnglishSkippedListening: false,
     answerString: "",        
     scoreString: "",         
-    subjectiveQNums: "",     
+    subjectiveQNums: "",
+    categoryString: "", // [NEW] 통합과학용 카테고리 입력
   });
 
-  // 문항 수 계산 (정답)
+  // [복구] 문항 수 계산
   const getQuestionCount = () => {
     const str = subjectInfo.answerString.trim();
     if (!str) return 0;
@@ -25,7 +26,7 @@ export default function ExamManager() {
     }
   };
 
-  // [NEW] 배점 개수 계산
+  // [복구] 배점 개수 계산
   const getScoreCount = () => {
     const str = subjectInfo.scoreString.trim();
     if (!str) return 0;
@@ -34,14 +35,6 @@ export default function ExamManager() {
     } else {
       return str.replace(/\s/g, '').length;
     }
-  };
-
-  // 정답 포맷팅 (연속 -> 콤마)
-  const formatToComma = () => {
-    const current = subjectInfo.answerString;
-    if (!current || current.includes(',')) return;
-    const formatted = current.split('').join(', ');
-    setSubjectInfo({ ...subjectInfo, answerString: formatted });
   };
 
   const handleCreateSubject = async () => {
@@ -56,29 +49,18 @@ export default function ExamManager() {
       }
       const qCount = answers.length;
       
-      // 2. [수정됨] 배점 파싱 (연속 입력 지원)
+      // 2. 배점 파싱
       const rawScore = subjectInfo.scoreString.trim();
       let scores: number[] = [];
-      
       if (!rawScore) {
-        // 미입력 시 기본 4점
         scores = Array(qCount).fill(4);
       } else if (rawScore.includes(',')) {
-        // 콤마 모드
         scores = rawScore.split(',').filter(s => s.trim() !== '').map(s => Number(s.trim()));
       } else {
-        // [NEW] 연속 입력 모드 (예: 34343)
         scores = rawScore.replace(/\s/g, '').split('').map(Number);
       }
 
-      // 개수 검증 (선택 사항)
-      if (rawScore && scores.length !== qCount) {
-        if (!confirm(`문항 수(${qCount}개)와 배점 개수(${scores.length}개)가 다릅니다. 그래도 저장할까요?`)) {
-          return;
-        }
-      }
-
-      // 3. 시작 번호 (영어 듣기)
+      // 3. 시작 번호
       let startNum = 1;
       if (subjectInfo.subjectName === "영어" && subjectInfo.isEnglishSkippedListening) {
         startNum = 18;
@@ -94,10 +76,23 @@ export default function ExamManager() {
         });
       }
 
-      // 5. 통합과학 카테고리 (더미)
+      // 5. [NEW] 통합과학 카테고리 파싱
       let categories: string[] = [];
       if (subjectInfo.subjectName === '통합과학') {
-        categories = Array(qCount).fill('comm'); 
+        const rawCat = subjectInfo.categoryString.trim();
+        if (rawCat) {
+          categories = rawCat.includes(',') 
+            ? rawCat.split(',').map(s => s.trim()) 
+            : rawCat.split('');
+        } else {
+          categories = Array(qCount).fill('공통');
+        }
+
+        if (categories.length !== qCount) {
+           if(!confirm(`카테고리 개수(${categories.length})가 문항 수(${qCount})와 다릅니다. 뒷부분은 '공통'으로 채울까요?`)) return;
+           while(categories.length < qCount) categories.push('공통');
+           categories = categories.slice(0, qCount);
+        }
       }
 
       // 6. DB 저장
@@ -132,9 +127,10 @@ export default function ExamManager() {
     }
   };
 
+  // [복구] 렌더링에 필요한 변수 계산
   const qCount = getQuestionCount();
   const sCount = getScoreCount();
-  const isCountMismatch = subjectInfo.scoreString && qCount !== sCount;
+  const isCountMismatch = subjectInfo.scoreString.trim() !== "" && qCount !== sCount;
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-white shadow-md rounded-lg mt-10">
@@ -155,7 +151,7 @@ export default function ExamManager() {
           <label className="block font-bold mb-1">학년</label>
           <select 
             className="w-full border p-2 rounded"
-            value={subjectInfo.grade} // [수정] value 속성 추가
+            value={subjectInfo.grade}
             onChange={e => setSubjectInfo({...subjectInfo, grade: e.target.value})}
           >
             <option value="고1">고1</option>
@@ -167,7 +163,7 @@ export default function ExamManager() {
           <label className="block font-bold mb-1">과목</label>
           <select 
             className="w-full border p-2 rounded"
-            value={subjectInfo.subjectName} // [수정] value 속성 추가
+            value={subjectInfo.subjectName}
             onChange={e => setSubjectInfo({...subjectInfo, subjectName: e.target.value})}
           >
             <option value="국어">국어</option>
@@ -200,32 +196,18 @@ export default function ExamManager() {
             문항 수: {qCount}
           </span>
         </div>
-        
         <p className="text-sm text-gray-500 mb-2">
           객관식(12345)은 연속 입력. 서술형(67)은 <strong>쉼표(,)</strong>로 구분.
         </p>
-        
-        <div className="flex gap-2 mb-2">
-           <input 
-            className="w-full border p-2 rounded font-mono tracking-widest" 
-            placeholder="예: 12345, 67, 100"
-            value={subjectInfo.answerString}
-            onChange={e => setSubjectInfo({...subjectInfo, answerString: e.target.value})}
-          />
-          <button 
-            onClick={formatToComma}
-            className="whitespace-nowrap bg-gray-200 hover:bg-gray-300 px-3 py-2 rounded text-sm font-bold"
-            title="연속된 숫자를 쉼표 구분으로 바꿉니다"
-          >
-            쉼표 변환 🪄
-          </button>
-        </div>
-        <p className="text-sm text-blue-600">
-          💡 팁: 객관식(12345) 먼저 입력 후 [쉼표 변환]을 누르고, 뒤에 서술형 정답(, 67, 100)을 적으세요.
-        </p>
+        <input 
+          className="w-full border p-2 rounded font-mono tracking-widest" 
+          placeholder="예: 12345, 67"
+          value={subjectInfo.answerString}
+          onChange={e => setSubjectInfo({...subjectInfo, answerString: e.target.value})}
+        />
       </div>
 
-      {/* [수정됨] 배점 입력부 */}
+      {/* 배점 입력부 */}
       <div className="mb-4">
         <div className="flex justify-between items-end mb-1">
           <label className="block font-bold">배점 입력 (연속 입력 가능)</label>
@@ -233,23 +215,37 @@ export default function ExamManager() {
             배점 개수: {sCount} {isCountMismatch && "(불일치!)"}
           </span>
         </div>
-        <p className="text-sm text-gray-500 mb-2">
-          한 자리수라면 연속으로 입력하세요 (예: 34343). 소수점 등은 쉼표 사용.
-        </p>
         <input 
           className="w-full border p-2 rounded font-mono tracking-widest" 
-          placeholder="예: 343433434"
+          placeholder="예: 34343"
           value={subjectInfo.scoreString}
           onChange={e => setSubjectInfo({...subjectInfo, scoreString: e.target.value})}
         />
       </div>
+
+      {/* [NEW] 통합과학 카테고리 입력 */}
+      {subjectInfo.subjectName === "통합과학" && (
+        <div className="mb-4 bg-green-50 p-4 rounded border border-green-200">
+          <label className="block font-bold mb-1 text-green-800">과학 카테고리 입력</label>
+          <p className="text-sm text-green-700 mb-2">
+            각 문항에 해당하는 과목을 순서대로 입력하세요. (물리, 화학, 생명, 지구)<br/>
+            예시: 물,물,화,화,생,생...
+          </p>
+          <input 
+            className="w-full border p-2 rounded font-mono" 
+            placeholder="물,화,생,지"
+            value={subjectInfo.categoryString}
+            onChange={e => setSubjectInfo({...subjectInfo, categoryString: e.target.value})}
+          />
+        </div>
+      )}
 
       <div className="mb-6 bg-yellow-50 p-4 rounded border border-yellow-200">
         <label className="block font-bold mb-1 text-yellow-800">서술형(주관식) 문항 번호</label>
         <p className="text-sm text-yellow-700 mb-2">입력한 번호는 OMR 대신 숫자 입력창이 뜹니다.</p>
         <input 
           className="w-full border p-2 rounded" 
-          placeholder="예: 22, 23, 24"
+          placeholder="예: 22, 23"
           value={subjectInfo.subjectiveQNums}
           onChange={e => setSubjectInfo({...subjectInfo, subjectiveQNums: e.target.value})}
         />
