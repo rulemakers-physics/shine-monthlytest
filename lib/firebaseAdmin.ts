@@ -1,6 +1,6 @@
 import admin from 'firebase-admin';
 
-// 초기화 여부 확인을 위한 전역 변수
+// 전역 초기화 체크 (Next.js Hot Reload 대응)
 /* eslint-disable no-var */
 declare global {
   var _firebaseAdminApp: admin.app.App | undefined;
@@ -9,17 +9,24 @@ declare global {
 
 if (!admin.apps.length) {
   try {
-    // 1. serviceAccountKey.json 파일을 가져옵니다.
-    // 주의: 이 방식은 빌드 시점에 파일이 존재해야 하므로, 배포 시 파일이 없으면 에러가 날 수 있습니다.
+    // [1] 로컬 개발 환경: serviceAccountKey.json 파일을 찾아 사용합니다.
+    // 주의: 이 파일은 .gitignore에 포함되어 배포되지 않으므로, 로컬에서만 작동합니다.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const serviceAccount = require("@/serviceAccountKey.json");
-
+    
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
     });
-    console.log("🔥 Firebase Admin Initialized with serviceAccountKey.json");
+    console.log("🔥 Firebase Admin Initialized with serviceAccountKey.json (Local)");
+    
   } catch (error) {
-    console.error("❌ Firebase Admin Initialization Error:", error);
+    // [2] 배포 환경 (Firebase Hosting/Cloud Functions):
+    // 파일이 없으면 자동으로 서버의 기본 자격 증명(ADC)을 사용해 초기화합니다.
+    // 별도의 설정 없이도 Firestore 등 리소스 접근 권한을 가집니다.
+    if (!admin.apps.length) {
+      admin.initializeApp();
+      console.log("🔥 Firebase Admin Initialized with Default Credentials (Production)");
+    }
   }
 }
 
