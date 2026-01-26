@@ -6,6 +6,13 @@ import styles from './Page.module.css';
 import ResultModal from './components/ResultModal';
 import Link from 'next/link';
 
+// [추가] 학년별 표시할 과목 목록 정의
+const SUBJECTS_BY_GRADE: Record<string, string[]> = {
+  '고1': ['국어', '수학', '영어', '통합과학'],
+  '고2': ['국어', '수학', '영어', '통합과학'],
+  '고3': ['화법과 작문', '언어와 매체', '확률과 통계', '미적분', '기하', '영어']
+};
+
 export default function Home() {
   const [exams, setExams] = useState<any[]>([]);
   const [selectedExamId, setSelectedExamId] = useState("");
@@ -197,10 +204,10 @@ export default function Home() {
               ))}
             </div>
 
-            {/* 과목 버튼 */}
+            {/* 과목 버튼 - 수정됨: 동적 목록 렌더링 */}
             {selectedGrade && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {['국어', '수학', '영어', '통합과학'].map(sub => (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {(SUBJECTS_BY_GRADE[selectedGrade] || []).map(sub => (
                   <button 
                     key={sub}
                     className={`py-3 px-4 rounded-xl border-2 font-bold text-sm transition-all duration-200 ${

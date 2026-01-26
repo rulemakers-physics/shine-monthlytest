@@ -1,34 +1,42 @@
 import admin from 'firebase-admin';
 
-// 전역 초기화 체크 (Next.js Hot Reload 대응)
-/* eslint-disable no-var */
-declare global {
-  var _firebaseAdminApp: admin.app.App | undefined;
-}
-/* eslint-enable no-var */
+// [핵심] rmleveltest처럼 별도의 앱 이름을 지정해 충돌 방지
+const ADMIN_APP_NAME = 'shine-monthlytest-admin';
 
-if (!admin.apps.length) {
-  try {
-    // [1] 로컬 개발 환경: serviceAccountKey.json 파일을 찾아 사용합니다.
-    // 주의: 이 파일은 .gitignore에 포함되어 배포되지 않으므로, 로컬에서만 작동합니다.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const serviceAccount = require("@/serviceAccountKey.json");
-    
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-    console.log("🔥 Firebase Admin Initialized with serviceAccountKey.json (Local)");
-    
-  } catch (error) {
-    // [2] 배포 환경 (Firebase Hosting/Cloud Functions):
-    // 파일이 없으면 자동으로 서버의 기본 자격 증명(ADC)을 사용해 초기화합니다.
-    // 별도의 설정 없이도 Firestore 등 리소스 접근 권한을 가집니다.
-    if (!admin.apps.length) {
-      admin.initializeApp();
-      console.log("🔥 Firebase Admin Initialized with Default Credentials (Production)");
+let app: admin.app.App;
+
+// 이미 해당 이름으로 초기화된 앱이 있다면 그것을 사용 (Hot Reload 대응)
+if (admin.apps.some(a => a && a.name === ADMIN_APP_NAME)) {
+  app = admin.app(ADMIN_APP_NAME);
+} else {
+  // [1] 배포 환경 (Production): Cloud Run의 자동 인증(ADC) 사용
+  if (process.env.NODE_ENV === 'production') {
+    app = admin.initializeApp({
+      credential: admin.credential.applicationDefault(),
+      projectId: 'shine-monthlytest' // 프로젝트 ID 명시
+    }, ADMIN_APP_NAME); // <-- 여기에 이름을 넣어주는 것이 핵심!
+    console.log("🔥 [Production] Named Firebase Admin App Initialized");
+  } 
+  // [2] 로컬 개발 환경: serviceAccountKey.json 사용
+  else {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const serviceAccount = require("@/serviceAccountKey.json");
+      app = admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        projectId: 'shine-monthlytest'
+      }, ADMIN_APP_NAME);
+      console.log("🔥 [Local] Named Firebase Admin App Initialized");
+    } catch (error) {
+      console.warn("⚠️ 로컬 키 파일 없음. ADC 모드로 시도합니다.");
+      app = admin.initializeApp({
+        credential: admin.credential.applicationDefault(),
+        projectId: 'shine-monthlytest'
+      }, ADMIN_APP_NAME);
     }
   }
 }
 
-const db = admin.firestore();
-export { db };
+// 초기화된 앱 인스턴스에서 Firestore 가져오기
+export const db = app.firestore();
+export { admin };

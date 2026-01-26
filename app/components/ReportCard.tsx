@@ -40,13 +40,11 @@ const HEX = {
   purple500: "#a855f7",
 };
 
-// 차트 색상 팔레트
+// [수정] 색상 및 표시 목록 업데이트
 const CHART_COLORS = {
-  국어: "#ef4444", 
-  수학: "#3b82f6", 
-  영어: "#f59e0b", 
-  통합과학: "#10b981", 
-  기타: "#8b5cf6" 
+  국어: "#ef4444", 수학: "#3b82f6", 영어: "#f59e0b", 통합과학: "#10b981", 기타: "#8b5cf6",
+  "화법과 작문": "#ef4444", "언어와 매체": "#ef4444",
+  "확률과 통계": "#3b82f6", "미적분": "#3b82f6", "기하": "#3b82f6"
 };
 
 export default function ReportCard({ result }: ReportCardProps) {
@@ -215,7 +213,11 @@ export default function ReportCard({ result }: ReportCardProps) {
                   />
                   <Legend wrapperStyle={{fontSize: '11px', paddingTop: '10px'}} />
                   
-                  {['국어', '수학', '영어', '통합과학'].map(sub => (
+                  {[
+                    '국어', '수학', '영어', '통합과학',
+                    '화법과 작문', '언어와 매체',
+                    '확률과 통계', '미적분', '기하'
+                  ].map(sub => (
                     <Line 
                       key={sub}
                       type="monotone" 

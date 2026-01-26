@@ -5,9 +5,14 @@ import {
 } from 'recharts';
 import ResultModal from '@/app/components/ResultModal';
 
-// 차트 색상
+// [수정] 고3 선택 과목에 대한 색상 추가 (국어 계열은 빨강, 수학 계열은 파랑 통일 추천)
 const COLORS = {
-  국어: "#ef4444", 수학: "#3b82f6", 영어: "#f59e0b", 통합과학: "#10b981", 기타: "#8b5cf6"
+  // 공통
+  국어: "#ef4444", 수학: "#3b82f6", 영어: "#f59e0b", 통합과학: "#10b981", 기타: "#8b5cf6",
+  // 고3 국어 선택
+  "화법과 작문": "#ef4444", "언어와 매체": "#b91c1c", // 같은 계열 다른 톤
+  // 고3 수학 선택
+  "확률과 통계": "#3b82f6", "미적분": "#2563eb", "기하": "#1d4ed8"
 };
 
 export default function DashboardClient({ studentInfo, results }: { studentInfo: any, results: any[] }) {
@@ -66,7 +71,12 @@ export default function DashboardClient({ studentInfo, results }: { studentInfo:
                   />
                   <Legend wrapperStyle={{ paddingTop: '20px' }} />
                   
-                  {['국어', '수학', '영어', '통합과학'].map(sub => (
+                  {/* 표시할 모든 과목 목록을 배열로 정의 */}
+                  {[
+                    '국어', '수학', '영어', '통합과학',
+                    '화법과 작문', '언어와 매체',
+                    '확률과 통계', '미적분', '기하'
+                  ].map(sub => (
                     <Line 
                       key={sub}
                       type="monotone" 

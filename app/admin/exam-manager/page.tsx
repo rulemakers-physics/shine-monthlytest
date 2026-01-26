@@ -15,6 +15,18 @@ export default function ExamManager() {
     categoryString: "", // [NEW] 통합과학용 카테고리 입력
   });
 
+  // [수정] 학년에 따른 과목 목록 동적 생성
+  const getSubjectOptions = () => {
+    if (subjectInfo.grade === "고3") {
+      return [
+        "화법과 작문", "언어와 매체", // 국어 선택
+        "확률과 통계", "미적분", "기하", // 수학 선택
+        "영어"
+      ];
+    }
+    return ["국어", "수학", "영어", "통합과학"]; // 고1, 고2
+  };
+
   // [복구] 문항 수 계산
   const getQuestionCount = () => {
     const str = subjectInfo.answerString.trim();
@@ -152,7 +164,12 @@ export default function ExamManager() {
           <select 
             className="w-full border p-2 rounded"
             value={subjectInfo.grade}
-            onChange={e => setSubjectInfo({...subjectInfo, grade: e.target.value})}
+            onChange={e => {
+              const newGrade = e.target.value;
+              // 학년 변경 시 과목명 초기화 (고3 <-> 고1/2 전환 시 목록이 달라지므로)
+              const defaultSubject = newGrade === "고3" ? "화법과 작문" : "국어";
+              setSubjectInfo({...subjectInfo, grade: newGrade, subjectName: defaultSubject});
+            }}
           >
             <option value="고1">고1</option>
             <option value="고2">고2</option>
@@ -166,10 +183,9 @@ export default function ExamManager() {
             value={subjectInfo.subjectName}
             onChange={e => setSubjectInfo({...subjectInfo, subjectName: e.target.value})}
           >
-            <option value="국어">국어</option>
-            <option value="수학">수학</option>
-            <option value="영어">영어</option>
-            <option value="통합과학">통합과학</option>
+            {getSubjectOptions().map(sub => (
+              <option key={sub} value={sub}>{sub}</option>
+            ))}
           </select>
         </div>
       </div>
@@ -223,8 +239,8 @@ export default function ExamManager() {
         />
       </div>
 
-      {/* [NEW] 통합과학 카테고리 입력 */}
-      {subjectInfo.subjectName === "통합과학" && (
+      {/* [수정] 통합과학 카테고리 입력은 '고3'이 아닐 때만 보이도록 조건 추가 */}
+      {subjectInfo.subjectName === "통합과학" && subjectInfo.grade !== "고3" && (
         <div className="mb-4 bg-green-50 p-4 rounded border border-green-200">
           <label className="block font-bold mb-1 text-green-800">과학 카테고리 입력</label>
           <p className="text-sm text-green-700 mb-2">
