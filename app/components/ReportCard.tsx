@@ -52,6 +52,14 @@ export default function ReportCard({ result }: ReportCardProps) {
   const [comment, setComment] = useState("");
   const [historyData, setHistoryData] = useState<any[]>([]);
 
+  // [수정] 점수 보정 함수
+  const getAdjustedScore = (subject: string, score: number) => {
+    return subject === '영어' ? score + 37 : score;
+  };
+
+  // [수정] 현재 표시할 총점 계산
+  const displayScore = getAdjustedScore(result.subjectName, result.totalScore);
+
   useEffect(() => {
     const fetchHistory = async () => {
       try {
@@ -67,7 +75,8 @@ export default function ReportCard({ result }: ReportCardProps) {
               const label = key.includes('-') ? `${parseInt(key.split('-')[1])}월` : key;
               grouped[key] = { name: label };
             }
-            grouped[key][item.subjectName] = item.totalScore;
+            // [수정] 히스토리 차트에도 보정된 점수 반영
+            grouped[key][item.subjectName] = getAdjustedScore(item.subjectName, item.totalScore);
           });
 
           setHistoryData(Object.values(grouped));
@@ -145,7 +154,8 @@ export default function ReportCard({ result }: ReportCardProps) {
             </div>
           </div>
           <div className="text-right">
-            <span className="block text-2xl font-extrabold" style={{ color: HEX.blue600 }}>{result.totalScore}점</span>
+            {/* [수정] 여기에 보정된 점수(displayScore) 표시 */}
+            <span className="block text-2xl font-extrabold" style={{ color: HEX.blue600 }}>{displayScore}점</span>
             <span className="text-sm font-semibold" style={{ color: HEX.gray600 }}>{result.studentName} 학생</span>
           </div>
         </header>

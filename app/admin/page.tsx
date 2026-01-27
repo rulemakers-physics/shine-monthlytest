@@ -46,7 +46,11 @@ export default function AdminDashboard() {
         const grouped: Record<string, { total: number, count: number }> = {};
         results.forEach((r: any) => {
           if (!grouped[r.subjectName]) grouped[r.subjectName] = { total: 0, count: 0 };
-          grouped[r.subjectName].total += r.totalScore;
+          
+          // [수정] 통계 집계 시 영어 점수 보정
+          const score = r.subjectName === '영어' ? r.totalScore + 37 : r.totalScore;
+          
+          grouped[r.subjectName].total += score;
           grouped[r.subjectName].count += 1;
         });
 

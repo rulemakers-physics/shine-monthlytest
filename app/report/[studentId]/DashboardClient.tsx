@@ -18,23 +18,28 @@ const COLORS = {
 export default function DashboardClient({ studentInfo, results }: { studentInfo: any, results: any[] }) {
   const [selectedResult, setSelectedResult] = useState<any>(null);
 
-  // 1. 차트용 데이터 가공 (과거 -> 현재 순으로 재정렬)
+  // [수정] 점수 보정 함수 (영어면 37점 더하기)
+  const getAdjustedScore = (subject: string, score: number) => {
+    return subject === '영어' ? score + 37 : score;
+  };
+
+  // 1. 차트용 데이터 가공
   const chartData = [...results].reverse().reduce((acc: any[], curr: any) => {
-    // 날짜 혹은 시험명으로 라벨링
     const label = curr.examId.includes('-') 
-      ? `${parseInt(curr.examId.split('-')[1])}월` // "2026-03" -> "3월"
+      ? `${parseInt(curr.examId.split('-')[1])}월` 
       : curr.examId;
       
-    // 같은 시험(월)에 여러 과목이 있을 수 있으므로 그룹핑
+    // [수정] 차트 데이터에 보정된 점수 반영
+    const score = getAdjustedScore(curr.subjectName, curr.totalScore);
+
     const existing = acc.find(item => item.name === label);
     if (existing) {
-      existing[curr.subjectName] = curr.totalScore;
+      existing[curr.subjectName] = score;
     } else {
-      acc.push({ name: label, [curr.subjectName]: curr.totalScore });
+      acc.push({ name: label, [curr.subjectName]: score });
     }
     return acc;
   }, []);
-
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {/* 상단 헤더 */}
@@ -122,8 +127,9 @@ export default function DashboardClient({ studentInfo, results }: { studentInfo:
                   </p>
                 </div>
                 <div className="text-right">
+                  {/* [수정] 리스트 표시 점수에 보정된 점수 반영 */}
                   <span className="block text-2xl font-extrabold text-blue-600 group-hover:scale-110 transition-transform">
-                    {item.totalScore}
+                    {getAdjustedScore(item.subjectName, item.totalScore)}
                   </span>
                   <span className="text-xs text-gray-400">점</span>
                 </div>
