@@ -9,6 +9,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: '📊 대시보드', path: '/admin' },
     { name: '👨‍🎓 학생별 리포트', path: '/admin/students' },
     { name: '📝 출제 관리', path: '/admin/exam-manager' },
+    { name: '🛠️ 성적 통합 관리', path: '/admin/results' }, // [NEW] 추가됨
+    { name: '🔍 데이터 모니터링', path: '/admin/monitoring' },
   ];
 
   return (
