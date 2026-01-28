@@ -5,41 +5,66 @@ import {
 } from 'recharts';
 import ResultModal from '@/app/components/ResultModal';
 
-// [수정] 고3 선택 과목에 대한 색상 추가 (국어 계열은 빨강, 수학 계열은 파랑 통일 추천)
-const COLORS = {
-  // 공통
-  국어: "#ef4444", 수학: "#3b82f6", 영어: "#f59e0b", 통합과학: "#10b981", 기타: "#8b5cf6",
-  // 고3 국어 선택
-  "화법과 작문": "#ef4444", "언어와 매체": "#b91c1c", // 같은 계열 다른 톤
-  // 고3 수학 선택
-  "확률과 통계": "#3b82f6", "미적분": "#2563eb", "기하": "#1d4ed8"
+// [수정] 통합된 과목 색상 정의 (세부 과목 제거)
+const COLORS: Record<string, string> = {
+  국어: "#ef4444", 
+  수학: "#3b82f6", 
+  영어: "#f59e0b", 
+  통합과학: "#10b981", 
+  기타: "#8b5cf6"
+};
+
+// [추가] 표시할 과목 순서 정의
+const SUBJECT_ORDER = ['국어', '수학', '영어', '통합과학'];
+
+// [추가] 과목명 통합 헬퍼 함수
+const normalizeSubject = (subject: string) => {
+  if (['화법과 작문', '언어와 매체'].includes(subject)) return '국어';
+  if (['확률과 통계', '미적분', '기하'].includes(subject)) return '수학';
+  return subject; // 영어, 통합과학 등은 그대로 반환
 };
 
 export default function DashboardClient({ studentInfo, results }: { studentInfo: any, results: any[] }) {
   const [selectedResult, setSelectedResult] = useState<any>(null);
 
-  // [수정] 점수 보정 함수 (영어면 37점 더하기)
-  const getAdjustedScore = (subject: string, score: number) => {
-    return subject === '영어' ? score + 37 : score;
-  };
+  // [수정] 리스트 정렬 로직 (1순위: 최신 시험, 2순위: 국수영탐 순서)
+  const sortedResults = [...results].sort((a, b) => {
+    // 1. 날짜(최신순) 비교
+    const dateA = new Date(a.createdAt).getTime();
+    const dateB = new Date(b.createdAt).getTime();
+    if (dateA !== dateB) return dateB - dateA;
 
-  // 1. 차트용 데이터 가공
-  const chartData = [...results].reverse().reduce((acc: any[], curr: any) => {
+    // 2. 과목 순서 비교
+    const subjA = normalizeSubject(a.subjectName);
+    const subjB = normalizeSubject(b.subjectName);
+    const idxA = SUBJECT_ORDER.indexOf(subjA);
+    const idxB = SUBJECT_ORDER.indexOf(subjB);
+    
+    // 목록에 없는 과목은 맨 뒤로 보냄
+    const orderA = idxA === -1 ? 99 : idxA;
+    const orderB = idxB === -1 ? 99 : idxB;
+    
+    return orderA - orderB;
+  });
+
+  // 1. 차트용 데이터 가공 (과거 -> 현재 순)
+  const chartData = [...sortedResults].reverse().reduce((acc: any[], curr: any) => {
     const label = curr.examId.includes('-') 
       ? `${parseInt(curr.examId.split('-')[1])}월` 
       : curr.examId;
       
-    // [수정] 차트 데이터에 보정된 점수 반영
-    const score = getAdjustedScore(curr.subjectName, curr.totalScore);
+    // [수정] 통합된 과목명으로 차트 데이터 생성
+    const displaySubject = normalizeSubject(curr.subjectName);
 
     const existing = acc.find(item => item.name === label);
     if (existing) {
-      existing[curr.subjectName] = score;
+      existing[displaySubject] = curr.totalScore;
     } else {
-      acc.push({ name: label, [curr.subjectName]: score });
+      acc.push({ name: label, [displaySubject]: curr.totalScore });
     }
     return acc;
   }, []);
+
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {/* 상단 헤더 */}
@@ -59,6 +84,18 @@ export default function DashboardClient({ studentInfo, results }: { studentInfo:
 
       <main className="max-w-4xl mx-auto p-6 space-y-8">
         
+        {/* 영어 성적 안내 */}
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r shadow-sm">
+          <div className="flex">
+            <div className="flex-shrink-0">⚠️</div>
+            <div className="ml-3">
+              <p className="text-sm text-yellow-700">
+                <span className="font-bold">영어 과목 안내:</span> 영어 성적은 <strong>듣기평가 문항을 제외</strong>하고 산출됩니다. (63점 만점 기준)
+              </p>
+            </div>
+          </div>
+        </div>
+        
         {/* 1. 종합 성적 추이 그래프 */}
         <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
           <h2 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
@@ -76,17 +113,13 @@ export default function DashboardClient({ studentInfo, results }: { studentInfo:
                   />
                   <Legend wrapperStyle={{ paddingTop: '20px' }} />
                   
-                  {/* 표시할 모든 과목 목록을 배열로 정의 */}
-                  {[
-                    '국어', '수학', '영어', '통합과학',
-                    '화법과 작문', '언어와 매체',
-                    '확률과 통계', '미적분', '기하'
-                  ].map(sub => (
+                  {/* [수정] 정의된 과목 순서(국/수/영/탐)대로 라인 생성 */}
+                  {SUBJECT_ORDER.map(sub => (
                     <Line 
                       key={sub}
                       type="monotone" 
                       dataKey={sub} 
-                      stroke={(COLORS as any)[sub] || COLORS.기타} 
+                      stroke={COLORS[sub] || COLORS.기타} 
                       strokeWidth={3} 
                       dot={{ r: 4, fill: '#fff', strokeWidth: 2 }}
                       connectNulls 
@@ -105,11 +138,11 @@ export default function DashboardClient({ studentInfo, results }: { studentInfo:
         {/* 2. 응시 목록 리스트 */}
         <section>
           <h2 className="text-lg font-bold text-gray-800 mb-4 ml-1">
-            📝 응시 기록 ({results.length})
+            📝 응시 기록 ({sortedResults.length})
           </h2>
           
           <div className="grid gap-3 md:grid-cols-2">
-            {results.map((item) => (
+            {sortedResults.map((item) => (
               <div 
                 key={item.id}
                 onClick={() => setSelectedResult(item)}
@@ -117,7 +150,10 @@ export default function DashboardClient({ studentInfo, results }: { studentInfo:
               >
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="font-bold text-gray-800">{item.subjectName}</span>
+                    {/* [수정] 리스트에도 통합된 과목명 표시 */}
+                    <span className="font-bold text-gray-800">
+                      {normalizeSubject(item.subjectName)}
+                    </span>
                     <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
                       {item.examId}
                     </span>
@@ -127,17 +163,18 @@ export default function DashboardClient({ studentInfo, results }: { studentInfo:
                   </p>
                 </div>
                 <div className="text-right">
-                  {/* [수정] 리스트 표시 점수에 보정된 점수 반영 */}
                   <span className="block text-2xl font-extrabold text-blue-600 group-hover:scale-110 transition-transform">
-                    {getAdjustedScore(item.subjectName, item.totalScore)}
+                    {item.subjectName === '영어' ? `${item.totalScore} / 63` : item.totalScore}
                   </span>
-                  <span className="text-xs text-gray-400">점</span>
+                  <span className="text-xs text-gray-400">
+                    {item.subjectName === '영어' ? '' : '점'}
+                  </span>
                 </div>
               </div>
             ))}
           </div>
           
-          {results.length === 0 && (
+          {sortedResults.length === 0 && (
             <div className="text-center py-10 text-gray-400 bg-white rounded-xl border border-dashed">
               기록이 없습니다.
             </div>
@@ -145,7 +182,7 @@ export default function DashboardClient({ studentInfo, results }: { studentInfo:
         </section>
       </main>
 
-      {/* 모달: 클릭 시 상세 성적표(ReportCard) 표시 */}
+      {/* 모달 */}
       {selectedResult && (
         <ResultModal 
           result={selectedResult} 
